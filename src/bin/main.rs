@@ -57,11 +57,16 @@ async fn main() {
     let state = AppState { prover, service_id: app_config.service_id.clone(), service_sk: sk };
     tracing::info!("Starting server...");
 
-    run_server(state, app_config).await;
+    let server_handle = spawn(async move {
+        run_server(state, app_config).await;
+    });
 
     tokio::select! {
         _ = runner_handle => {
             println!("Prover runner task completed");
+        }
+        _ = server_handle => {
+            println!("Server task completed");
         }
     }
 }
