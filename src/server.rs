@@ -4,7 +4,7 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use prism_client::{SignatureBundle, VerifyingKey};
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,7 @@ pub async fn run_server(app_state: AppState, config: Config) {
 
     // Build the router
     let app = Router::new()
+        .route("/v1/health", get(health_check_handler))
         .route("/v1/account/create", post(create_account_handler))
         .route("/v1/account/add_key", post(add_key_handler))
         .route("/v1/account/add_data", post(add_data_handler))
@@ -59,6 +60,12 @@ pub async fn run_server(app_state: AppState, config: Config) {
 }
 
 // Handlers
+
+// Health check
+async fn health_check_handler() -> impl IntoResponse {
+    (StatusCode::OK, "OK")
+}
+
 async fn create_account_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateAccountRequest>,
