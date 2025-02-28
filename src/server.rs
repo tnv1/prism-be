@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::AppState;
 use crate::config::Config;
-use crate::ops::{add_data, add_key, create_account};
+use crate::ops::{add_data, add_key, create_account, register_service};
 
 #[derive(Deserialize, Serialize, Debug)]
 struct CreateAccountRequest {
@@ -40,6 +40,11 @@ struct AccountResponse {
     id: String,
 }
 
+#[derive(Serialize)]
+struct RegisterServiceResponse {
+    message: String,
+}
+
 pub async fn run_server(app_state: AppState, config: Config) {
     // Wrap app_state in Arc
     let app_state = Arc::new(app_state);
@@ -47,6 +52,7 @@ pub async fn run_server(app_state: AppState, config: Config) {
     // Build the router
     let app = Router::new()
         .route("/v1/health", get(health_check_handler))
+        .route("/v1/account/register", post(register_service_handler))
         .route("/v1/account/create", post(create_account_handler))
         .route("/v1/account/add_key", post(add_key_handler))
         .route("/v1/account/add_data", post(add_data_handler))
@@ -64,6 +70,14 @@ pub async fn run_server(app_state: AppState, config: Config) {
 // Health check
 async fn health_check_handler() -> impl IntoResponse {
     (StatusCode::OK, "OK")
+}
+
+// Register service
+async fn register_service_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let state = state.clone();
+    register_service(state).await.unwrap();
+
+    (StatusCode::OK, Json(RegisterServiceResponse { message: "Service registered".to_string() }))
 }
 
 async fn create_account_handler(

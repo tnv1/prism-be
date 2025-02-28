@@ -8,7 +8,7 @@ use prism_client::{
 use crate::app::AppState;
 
 // Register service to be able to create accounts
-pub async fn register_service(app: &AppState) -> anyhow::Result<()> {
+pub async fn register_service(app: Arc<AppState>) -> anyhow::Result<()> {
     // First, we make sure the service is not already registered.
     if app.prover.get_account(&app.service_id).await?.account.is_some() {
         tracing::info!("Service already registered.");
