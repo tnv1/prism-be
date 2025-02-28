@@ -1,9 +1,12 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+
+use prism_client::SigningKey;
+use prism_prover::Prover;
 
 // Application state
 #[derive(Clone)]
 pub struct AppState {
-    pub accounts: Arc<Mutex<HashMap<String, Vec<String>>>>,
-    pub data: Arc<Mutex<HashMap<String, Vec<String>>>>,
+    pub prover: Arc<Prover>,
+    pub service_id: String,
+    pub service_sk: SigningKey,
 }
