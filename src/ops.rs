@@ -1,5 +1,6 @@
-use anyhow::anyhow;
 use std::sync::Arc;
+
+use anyhow::anyhow;
 use prism_client::{
     Account, PendingTransaction as _, PrismApi as _, SignatureBundle, VerifyingKey,
 };
@@ -63,17 +64,19 @@ pub async fn add_key(
     new_key: VerifyingKey,
     signature_bundle: SignatureBundle,
 ) -> anyhow::Result<Account> {
-    if let Some(account) = app.prover.get_account(&user_id).await?.account {
+    if let Some(mut account) = app.prover.get_account(&user_id).await?.account {
         tracing::info!("Submitting transaction to add key to account {}", &user_id);
 
-        let updated_account = app
-            .prover
-            .build_request()
-            .to_modify_account(&account)
-            .add_key(new_key.clone())?
-            .with_external_signature(signature_bundle).send().await?.wait().await?;
+        let unsigned_tx =
+            app.prover.build_request().to_modify_account(&account).add_key(new_key)?.transaction();
 
-        return Ok(updated_account);
+        let tx = unsigned_tx.externally_signed(signature_bundle);
+        account.process_transaction(&tx)?;
+
+        tracing::info!("Submitting transaction to add key to account {}", &user_id);
+        app.prover.validate_and_queue_update(tx.clone()).await?;
+
+        return Ok(account);
     };
 
     Err(anyhow!("Account {} not found", &user_id))
@@ -85,18 +88,24 @@ pub async fn add_data(
     user_id: String,
     data: Vec<u8>,
     data_signature: SignatureBundle,
-    signature_bundle: SignatureBundle
+    signature_bundle: SignatureBundle,
 ) -> anyhow::Result<Account> {
-    if let Some(account) = app.prover.get_account(&user_id).await?.account {
+    if let Some(mut account) = app.prover.get_account(&user_id).await?.account {
         tracing::info!("Submitting transaction to add data to account {}", &user_id);
-        let updated_account = app
+        let unsigned_tx = app
             .prover
             .build_request()
             .to_modify_account(&account)
             .add_data(data, data_signature)?
-            .with_external_signature(signature_bundle).send().await?.wait().await?;
+            .transaction();
 
-        return Ok(updated_account);
+        let tx = unsigned_tx.externally_signed(signature_bundle);
+        account.process_transaction(&tx)?;
+
+        tracing::info!("Submitting transaction to add data to account {}", &user_id);
+        app.prover.validate_and_queue_update(tx.clone()).await?;
+
+        return Ok(account);
     };
 
     Err(anyhow!("Account {} not found", &user_id))
