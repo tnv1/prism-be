@@ -3,6 +3,7 @@ use std::sync::Arc;
 use keystore_rs::{KeyChain, KeyStore};
 use prism_be::app::AppState;
 use prism_be::config::parse_config;
+use prism_be::ops::register_service;
 use prism_be::server::run_server;
 use prism_client::SigningKey;
 use prism_da::DataAvailabilityLayer;
@@ -55,9 +56,13 @@ async fn main() {
     });
 
     let state = AppState { prover, service_id: app_config.service_id.clone(), service_sk: sk };
-    tracing::info!("Starting server...");
+
+    // Register service
+    tracing::info!("Registering service...");
+    register_service(&state).await.unwrap();
 
     let server_handle = spawn(async move {
+        tracing::info!("Starting server...");
         run_server(state, app_config).await;
     });
 
